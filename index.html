@@ -47,8 +47,8 @@
 
   // load both CSVs once
   Promise.all([
-    d3.csv("sankey_nodes.csv"),
-    d3.csv("sankey_links.csv")
+    d3.csv("all_nodes.csv"),
+    d3.csv("all_links.csv")
   ]).then(([rawNodes, rawLinks]) => {
 
     // parse nodes
