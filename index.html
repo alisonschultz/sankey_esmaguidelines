@@ -46,9 +46,10 @@
     .extent([[margin.left, margin.top], [width - margin.right, height - margin.bottom]]);
 
   // load both CSVs once
-  Promise.all([
-    d3.csv("all_nodes.csv"),
-    d3.csv("all_links.csv")
+  
+Promise.all([
+  d3.csv("./all_nodes.csv"),
+  d3.csv("./all_links.csv")
   ]).then(([rawNodes, rawLinks]) => {
 
     // parse nodes
@@ -129,7 +130,8 @@
     d3.select("#amSelect").on("change", function() {
       draw(this.value);
     });
-  });
+  });    
+  .catch(err => console.error("CSV load failed:", err));
   </script>
 </body>
 </html>
