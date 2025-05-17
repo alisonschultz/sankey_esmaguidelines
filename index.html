@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <title>ESMA Name-Change Sankey</title>
-  <script src="https://d3js.org/d3.v7.min.js"></script>
-  <script src="https://unpkg.com/d3-sankey@0.12.3/build/d3-sankey.min.js"></script>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3-sankey@0.12.3/dist/d3-sankey.min.js"></script>
   <style>
     body { font-family: sans-serif; margin:0; }
     #controls { padding:10px; }
@@ -131,7 +131,6 @@ Promise.all([
       draw(this.value);
     });
   });    
-  .catch(err => console.error("CSV load failed:", err));
   </script>
 </body>
 </html>
