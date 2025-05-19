@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>ESMA Name-Change Sankey (Custom Order)</title>
+  <title>ESMA Name-Change Sankey (Custom Vertical Order)</title>
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <script src="https://unpkg.com/d3-sankey@0.12.3"></script>
   <style>
@@ -12,22 +12,17 @@
       display: flex; justify-content: center; align-items: center;
       height: 100vh;
     }
-    .link {
-      fill: none; stroke-opacity: 0.5;
-      transition: stroke-opacity 0.2s ease;
-    }
+    .link { fill: none; stroke-opacity: 0.5; transition: stroke-opacity 0.2s; }
     .link.highlight { stroke-opacity: 0.9; }
     .dimmed .link:not(.highlight) { stroke-opacity: 0.3; }
-    .node rect {
-      opacity: 0.6; transition: opacity 0.2s ease;
-    }
+    .node rect { opacity: 0.6; transition: opacity 0.2s; }
     .node.highlight rect { opacity: 1 !important; }
     .dimmed .node rect:not(.highlight) { opacity: 0.3; }
     .tooltip {
       position: absolute; background: lightgrey;
       padding: 6px; border-radius: 4px;
       pointer-events: none; opacity: 0;
-      transition: opacity 0.2s ease;
+      transition: opacity 0.2s;
     }
     #chart { width: 100%; height: 100%; }
     svg { width: 100%; height: 100%; }
@@ -45,6 +40,28 @@
     const width  = fullW  - margin.left - margin.right;
     const height = fullH  - margin.top  - margin.bottom;
 
+    // desired vertical order
+    const order = [
+      "sustainable",
+      "environment",
+      "transition",
+      "impact",
+      "social",
+      "watchlist term",
+      "Begriff nicht ESMA-relevant"
+    ];
+
+    // sankey generator: two columns, with custom nodeSort
+    const sankey = d3.sankey()
+      .nodeWidth(20)
+      .nodePadding(10)
+      .extent([[1,1],[width-1,height-1]])
+      .nodeAlign(d3.sankeyJustify)
+      .nodeSort((a, b) => {
+        // a.name is your category string
+        return order.indexOf(a.name) - order.indexOf(b.name);
+      });
+
     // SVG setup
     const svg = d3.select("#chart")
       .append("svg")
@@ -56,44 +73,21 @@
     const tooltip = d3.select("#tooltip");
     const fmt = d3.format(",");
 
-    // Sankey generator: force only two columns
-    const sankey = d3.sankey()
-      .nodeWidth(20)
-      .nodePadding(10)
-      .extent([[1,1], [width-1, height-1]])
-      .nodeAlign(d3.sankeyJustify);
-
-    // Desired vertical order:
-    const order = [
-      "sustainable",
-      "environment",
-      "transition",
-      "impact",
-      "social",
-      "watchlist term",
-      "Begriff nicht ESMA-relevant"
-    ];
-
-    // Load CSVs
+    // load and draw
     Promise.all([
       d3.csv("all_nodes.csv"),
       d3.csv("all_links.csv")
     ]).then(([nodesRaw, linksRaw]) => {
-      // 1) Sort nodesRaw into the specified order
-      nodesRaw.sort((a, b) =>
-        order.indexOf(a.kategorie.trim()) - order.indexOf(b.kategorie.trim())
-      );
-
       const N = nodesRaw.length;
 
-      // 2) Duplicate nodes: left (0..N-1) and right (N..2N-1)
+      // duplicate nodes left/right
       const sankeyNodes = nodesRaw
-        .map((d,i) => ({ name: d.kategorie.trim(), color: d.color, col: "L" }))
+        .map(d => ({ name: d.kategorie.trim(), color: d.color, col: "L" }))
         .concat(
-          nodesRaw.map((d,i) => ({ name: d.kategorie.trim(), color: d.color, col: "R" }))
+          nodesRaw.map(d => ({ name: d.kategorie.trim(), color: d.color, col: "R" }))
         );
 
-      // 3) Build links: every CSV link becomes left-source → right-target
+      // map links -> left index / right index
       const sankeyLinks = linksRaw
         .map(d => {
           const sName = d.source_kategorie.trim();
@@ -105,13 +99,13 @@
         })
         .filter(d => d);
 
-      // 4) Layout
+      // compute layout
       const { nodes: Gnodes, links: Glinks } = sankey({
         nodes: sankeyNodes,
         links: sankeyLinks
       });
 
-      // 5) Build gradients
+      // gradients
       const defs = svg.append("defs");
       Glinks.forEach((link, i) => {
         const grad = defs.append("linearGradient")
@@ -119,63 +113,61 @@
           .attr("gradientUnits", "userSpaceOnUse")
           .attr("x1", link.source.x1)
           .attr("x2", link.target.x0);
-        grad.append("stop")
-          .attr("offset", "0%")
+        grad.append("stop").attr("offset","0%")
           .attr("stop-color", sankeyNodes[link.source.index].color);
-        grad.append("stop")
-          .attr("offset", "100%")
+        grad.append("stop").attr("offset","100%")
           .attr("stop-color", sankeyNodes[link.target.index].color);
       });
 
-      // 6) Draw links
+      // draw links
       svg.append("g")
         .selectAll("path")
         .data(Glinks)
         .enter().append("path")
-          .attr("class", "link")
+          .attr("class","link")
           .attr("d", d3.sankeyLinkHorizontal())
           .attr("stroke-width", d => Math.max(1, d.width))
           .attr("stroke", (d,i) => `url(#grad${i})`)
-          .on("mouseover", (e,d) => {
-            svg.classed("dimmed", true);
-            d3.select(e.currentTarget).classed("highlight", true);
-            tooltip.style("opacity", 1)
-              .html(`${fmt(Math.round(d.value))} Fonds`)
-              .style("left", `${e.pageX + 6}px`)
-              .style("top",  `${e.pageY - 6}px`);
+          .on("mouseover",(e,d)=>{
+            svg.classed("dimmed",true);
+            d3.select(e.currentTarget).classed("highlight",true);
+            tooltip.style("opacity",1)
+              .html(`${fmt(Math.round(d.value))}`)
+              .style("left",`${e.pageX+6}px`)
+              .style("top",`${e.pageY-6}px`);
           })
-          .on("mousemove", e => {
-            tooltip.style("left", `${e.pageX + 6}px`)
-                   .style("top",  `${e.pageY - 6}px`);
+          .on("mousemove",e=>{
+            tooltip.style("left",`${e.pageX+6}px`)
+                   .style("top",`${e.pageY-6}px`);
           })
-          .on("mouseout", () => {
-            svg.classed("dimmed", false);
-            d3.selectAll(".link").classed("highlight", false);
-            tooltip.style("opacity", 0);
+          .on("mouseout",()=>{
+            svg.classed("dimmed",false);
+            d3.selectAll(".link").classed("highlight",false);
+            tooltip.style("opacity",0);
           });
 
-      // 7) Draw nodes
+      // draw nodes
       const node = svg.append("g")
         .selectAll("g")
         .data(Gnodes)
         .enter().append("g")
           .attr("transform", d => `translate(${d.x0},${d.y0})`)
-          .on("mouseover", (e,d) => {
-            svg.classed("dimmed", true);
-            d3.select(e.currentTarget).classed("highlight", true);
-            tooltip.style("opacity", 1)
+          .on("mouseover",(e,d)=>{
+            svg.classed("dimmed",true);
+            d3.select(e.currentTarget).classed("highlight",true);
+            tooltip.style("opacity",1)
               .html(d.name)
-              .style("left", `${e.pageX + 6}px`)
-              .style("top",  `${e.pageY - 6}px`);
+              .style("left",`${e.pageX+6}px`)
+              .style("top",`${e.pageY-6}px`);
           })
-          .on("mousemove", e => {
-            tooltip.style("left", `${e.pageX + 6}px`)
-                   .style("top",  `${e.pageY - 6}px`);
+          .on("mousemove",e=>{
+            tooltip.style("left",`${e.pageX+6}px`)
+                   .style("top",`${e.pageY-6}px`);
           })
-          .on("mouseout", () => {
-            svg.classed("dimmed", false);
-            d3.selectAll(".node").classed("highlight", false);
-            tooltip.style("opacity", 0);
+          .on("mouseout",()=>{
+            svg.classed("dimmed",false);
+            d3.selectAll(".node").classed("highlight",false);
+            tooltip.style("opacity",0);
           });
 
       node.append("rect")
@@ -192,7 +184,6 @@
         .attr("text-anchor", d => d.col === "L" ? "start" : "end")
         .style("font-size", "12px")
         .text(d => d.name);
-
     })
     .catch(err => console.error("Failed to load CSVs or build sankey:", err));
   </script>
