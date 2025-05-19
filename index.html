@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>ESMA Name-Change Sankey (Custom Vertical Order)</title>
+  <title>ESMA Name-Change Sankey (Hide Empty Nodes)</title>
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <script src="https://unpkg.com/d3-sankey@0.12.3"></script>
   <style>
@@ -59,10 +59,9 @@
       .nodePadding(10)
       .extent([[1,1],[width-1,height-1]])
       .nodeAlign(d3.sankeyJustify)
-      .nodeSort((a, b) => {
-        // a.name is your category string
-        return order.indexOf(a.name) - order.indexOf(b.name);
-      });
+      .nodeSort((a, b) =>
+        order.indexOf(a.name) - order.indexOf(b.name)
+      );
 
     // SVG setup
     const svg = d3.select("#chart")
@@ -82,20 +81,18 @@
     ]).then(([nodesRaw, linksRaw]) => {
       const N = nodesRaw.length;
 
-      // duplicate nodes left/right
+      // duplicate nodes left & right
       const sankeyNodes = nodesRaw
         .map(d => ({ name: d.kategorie.trim(), color: d.color, col: "L" }))
         .concat(
           nodesRaw.map(d => ({ name: d.kategorie.trim(), color: d.color, col: "R" }))
         );
 
-      // map links -> left index / right index
+      // map links → left-index / right-index
       const sankeyLinks = linksRaw
         .map(d => {
-          const sName = d.source_kategorie.trim();
-          const tName = d.target_kategorie.trim();
-          const s = nodesRaw.findIndex(n => n.kategorie.trim() === sName);
-          const t = nodesRaw.findIndex(n => n.kategorie.trim() === tName);
+          const s = nodesRaw.findIndex(n => n.kategorie.trim() === d.source_kategorie.trim());
+          const t = nodesRaw.findIndex(n => n.kategorie.trim() === d.target_kategorie.trim());
           if (s < 0 || t < 0) return null;
           return { source: s, target: N + t, value: +d.value };
         })
@@ -109,15 +106,17 @@
 
       // gradients
       const defs = svg.append("defs");
-      Glinks.forEach((link, i) => {
+      Glinks.forEach((link,i) => {
         const grad = defs.append("linearGradient")
           .attr("id", `grad${i}`)
           .attr("gradientUnits", "userSpaceOnUse")
           .attr("x1", link.source.x1)
           .attr("x2", link.target.x0);
-        grad.append("stop").attr("offset","0%")
+        grad.append("stop")
+          .attr("offset","0%")
           .attr("stop-color", sankeyNodes[link.source.index].color);
-        grad.append("stop").attr("offset","100%")
+        grad.append("stop")
+          .attr("offset","100%")
           .attr("stop-color", sankeyNodes[link.target.index].color);
       });
 
@@ -136,11 +135,11 @@
             tooltip.style("opacity",1)
               .html(`${fmt(Math.round(d.value))}`)
               .style("left",`${e.pageX+6}px`)
-              .style("top",`${e.pageY-6}px`);
+              .style("top", `${e.pageY-6}px`);
           })
           .on("mousemove",e=>{
             tooltip.style("left",`${e.pageX+6}px`)
-                   .style("top",`${e.pageY-6}px`);
+                   .style("top", `${e.pageY-6}px`);
           })
           .on("mouseout",()=>{
             svg.classed("dimmed",false);
@@ -148,10 +147,12 @@
             tooltip.style("opacity",0);
           });
 
-      // draw nodes
+      // draw *only* nodes with some flow
+      const visibleNodes = Gnodes.filter(d => d.value > 0);
+
       const node = svg.append("g")
         .selectAll("g")
-        .data(Gnodes)
+        .data(visibleNodes)
         .enter().append("g")
           .attr("transform", d => `translate(${d.x0},${d.y0})`)
           .on("mouseover",(e,d)=>{
@@ -160,11 +161,11 @@
             tooltip.style("opacity",1)
               .html(d.name)
               .style("left",`${e.pageX+6}px`)
-              .style("top",`${e.pageY-6}px`);
+              .style("top", `${e.pageY-6}px`);
           })
           .on("mousemove",e=>{
             tooltip.style("left",`${e.pageX+6}px`)
-                   .style("top",`${e.pageY-6}px`);
+                   .style("top", `${e.pageY-6}px`);
           })
           .on("mouseout",()=>{
             svg.classed("dimmed",false);
@@ -178,14 +179,13 @@
         .attr("fill", d => d.color);
 
       node.append("text")
-        .attr("x", d => d.col === "L"
-                       ? sankey.nodeWidth() + 6
-                       : -6)
+        .attr("x", d => d.col === "L" ? sankey.nodeWidth() + 6 : -6)
         .attr("y", d => (d.y1 - d.y0) / 2)
         .attr("dy", "0.35em")
         .attr("text-anchor", d => d.col === "L" ? "start" : "end")
         .style("font-size", "12px")
         .text(d => d.name);
+
     })
     .catch(err => console.error("Failed to load CSVs or build sankey:", err));
   </script>
