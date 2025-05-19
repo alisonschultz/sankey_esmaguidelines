@@ -1,35 +1,37 @@
-source,target,value
-0,0,9166
-0,1,2240
-0,2,4
-0,3,179
-0,4,174
-0,5,1032
-0,6,264
-0,7,444
-1,0,224
-1,1,233
-1,4,1
-1,5,1
-1,6,17
-1,7,64
-3,0,2
-3,3,8
-3,6,1
-4,0,2
-4,4,8
-4,7,1
-5,0,103
-5,1,62
-5,5,46
-5,6,9
-5,7,12
-6,0,4
-6,1,9
-6,6,24
-7,0,26
-7,1,8
-7,3,1
-7,5,1
-7,6,1
-7,7,70
+source_kategorie,target_kategorie,value
+Begriff nicht ESMA-relevant,Begriff nicht ESMA-relevant,9031
+Begriff nicht ESMA-relevant,environment,2387
+Begriff nicht ESMA-relevant,governance,3
+Begriff nicht ESMA-relevant,impact,112
+Begriff nicht ESMA-relevant,social,150
+Begriff nicht ESMA-relevant,sustainable,1099
+Begriff nicht ESMA-relevant,transition,222
+Begriff nicht ESMA-relevant,watchlist term,467
+environment,Begriff nicht ESMA-relevant,225
+environment,environment,246
+environment,impact,1
+environment,social,2
+environment,sustainable,10
+environment,transition,14
+environment,watchlist term,73
+impact,Begriff nicht ESMA-relevant,1
+impact,environment,1
+impact,impact,3
+social,Begriff nicht ESMA-relevant,2
+social,social,7
+sustainable,Begriff nicht ESMA-relevant,109
+sustainable,environment,72
+sustainable,impact,1
+sustainable,social,1
+sustainable,sustainable,56
+sustainable,transition,7
+sustainable,watchlist term,10
+transition,Begriff nicht ESMA-relevant,4
+transition,environment,18
+transition,transition,22
+watchlist term,Begriff nicht ESMA-relevant,21
+watchlist term,environment,5
+watchlist term,impact,1
+watchlist term,sustainable,1
+watchlist term,transition,1
+watchlist term,watchlist term,56
