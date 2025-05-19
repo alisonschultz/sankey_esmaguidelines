@@ -2,24 +2,35 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>ESMA Name-Change Sankey (Duplication Trick)</title>
+  <title>ESMA Name-Change Sankey (Custom Order)</title>
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <script src="https://unpkg.com/d3-sankey@0.12.3"></script>
   <style>
-    body { font-family: Verdana, sans-serif; margin:0; padding:0;
-           display:flex; justify-content:center; align-items:center;
-           height:100vh; }
-    .link { fill:none; stroke-opacity:0.5; transition:stroke-opacity 0.2s; }
-    .link.highlight { stroke-opacity:0.9; }
-    .dimmed .link:not(.highlight) { stroke-opacity:0.3; }
-    .node rect { opacity:0.6; transition:opacity 0.2s; }
-    .node.highlight rect { opacity:1 !important; }
-    .dimmed .node rect:not(.highlight) { opacity:0.3; }
-    .tooltip { position:absolute; background:lightgrey; padding:6px;
-               border-radius:4px; pointer-events:none; opacity:0;
-               transition:opacity 0.2s; }
-    #chart { width:100%; height:100%; }
-    svg { width:100%; height:100%; }
+    body {
+      font-family: Verdana, sans-serif;
+      margin: 0; padding: 0;
+      display: flex; justify-content: center; align-items: center;
+      height: 100vh;
+    }
+    .link {
+      fill: none; stroke-opacity: 0.5;
+      transition: stroke-opacity 0.2s ease;
+    }
+    .link.highlight { stroke-opacity: 0.9; }
+    .dimmed .link:not(.highlight) { stroke-opacity: 0.3; }
+    .node rect {
+      opacity: 0.6; transition: opacity 0.2s ease;
+    }
+    .node.highlight rect { opacity: 1 !important; }
+    .dimmed .node rect:not(.highlight) { opacity: 0.3; }
+    .tooltip {
+      position: absolute; background: lightgrey;
+      padding: 6px; border-radius: 4px;
+      pointer-events: none; opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    #chart { width: 100%; height: 100%; }
+    svg { width: 100%; height: 100%; }
   </style>
 </head>
 <body>
@@ -28,141 +39,162 @@
   <div class="tooltip" id="tooltip"></div>
 
   <script>
-  // dimensions
-  const margin = { top:40, right:20, bottom:40, left:20 };
-  const fullW = 800, fullH = 500;
-  const width  = fullW  - margin.left - margin.right;
-  const height = fullH  - margin.top  - margin.bottom;
+    // dimensions
+    const margin = { top: 40, right: 20, bottom: 40, left: 20 };
+    const fullW = 800, fullH = 500;
+    const width  = fullW  - margin.left - margin.right;
+    const height = fullH  - margin.top  - margin.bottom;
 
-  const svg = d3.select("#chart")
-    .append("svg")
-      .attr("viewBox", `0 0 ${fullW} ${fullH}`)
-      .attr("preserveAspectRatio","xMinYMin meet")
-    .append("g")
-      .attr("transform", `translate(${margin.left},${margin.top})`);
+    // SVG setup
+    const svg = d3.select("#chart")
+      .append("svg")
+        .attr("viewBox", `0 0 ${fullW} ${fullH}`)
+        .attr("preserveAspectRatio", "xMinYMin meet")
+      .append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
 
-  const tooltip = d3.select("#tooltip");
-  const fmt = d3.format(",");
+    const tooltip = d3.select("#tooltip");
+    const fmt = d3.format(",");
 
-  // sankey with exactly 2 columns
-  const sankey = d3.sankey()
-    .nodeWidth(20)
-    .nodePadding(10)
-    .extent([[1,1],[width-1,height-1]])
-    .nodeAlign(d3.sankeyJustify);
+    // Sankey generator: force only two columns
+    const sankey = d3.sankey()
+      .nodeWidth(20)
+      .nodePadding(10)
+      .extent([[1,1], [width-1, height-1]])
+      .nodeAlign(d3.sankeyJustify);
 
-  // load CSVs
-  Promise.all([
-    d3.csv("all_nodes.csv"),
-    d3.csv("all_links.csv")
-  ]).then(([nodesRaw, linksRaw]) => {
-    const N = nodesRaw.length;
+    // Desired vertical order:
+    const order = [
+      "sustainable",
+      "environment",
+      "transition",
+      "impact",
+      "social",
+      "watchlist term",
+      "Begriff nicht ESMA-relevant"
+    ];
 
-    // 1) Duplicate nodes: left (0..N-1), right (N..2N-1)
-    const sankeyNodes = nodesRaw
-      .map((d,i)=>({ name:d.kategorie.trim(), color:d.color }))
-      .map((d,i)=> ({ ...d, col:"L"  }))     // left copies
-      .concat(
-        nodesRaw
-        .map((d,i)=>({ name:d.kategorie.trim(), color:d.color }))
-        .map((d,i)=> ({ ...d, col:"R" }))     // right copies
+    // Load CSVs
+    Promise.all([
+      d3.csv("all_nodes.csv"),
+      d3.csv("all_links.csv")
+    ]).then(([nodesRaw, linksRaw]) => {
+      // 1) Sort nodesRaw into the specified order
+      nodesRaw.sort((a, b) =>
+        order.indexOf(a.kategorie.trim()) - order.indexOf(b.kategorie.trim())
       );
 
-    // 2) Map every link to go from left→right
-    const sankeyLinks = linksRaw
-      .map(d=>{
-        const sName = d.source_kategorie.trim();
-        const tName = d.target_kategorie.trim();
-        const s = nodesRaw.findIndex(n=>n.kategorie.trim()===sName);
-        const t = nodesRaw.findIndex(n=>n.kategorie.trim()===tName);
-        if (s<0||t<0) return null;
-        return { source:s, target:N+t, value:+d.value };
-      })
-      .filter(d=>d);  // drop bad rows
+      const N = nodesRaw.length;
 
-    // 3) Run layout
-    const graph = { nodes:sankeyNodes, links:sankeyLinks };
-    const { nodes: Gnodes, links: Glinks } = sankey(graph);
+      // 2) Duplicate nodes: left (0..N-1) and right (N..2N-1)
+      const sankeyNodes = nodesRaw
+        .map((d,i) => ({ name: d.kategorie.trim(), color: d.color, col: "L" }))
+        .concat(
+          nodesRaw.map((d,i) => ({ name: d.kategorie.trim(), color: d.color, col: "R" }))
+        );
 
-    // 4) Build gradients
-    const defs = svg.append("defs");
-    Glinks.forEach((l,i)=>{
-      const grad = defs.append("linearGradient")
-        .attr("id",`grad${i}`)
-        .attr("gradientUnits","userSpaceOnUse")
-        .attr("x1",l.source.x1).attr("x2",l.target.x0);
-      grad.append("stop").attr("offset","0%")
-          .attr("stop-color", sankeyNodes[l.source.index].color);
-      grad.append("stop").attr("offset","100%")
-          .attr("stop-color", sankeyNodes[l.target.index].color);
-    });
-
-    // 5) Draw links
-    svg.append("g")
-      .selectAll("path")
-      .data(Glinks)
-      .enter().append("path")
-        .attr("class","link")
-        .attr("d", d3.sankeyLinkHorizontal())
-        .attr("stroke-width",d=>Math.max(1,d.width))
-        .attr("stroke",(d,i)=>`url(#grad${i})`)
-        .on("mouseover",(e,d)=>{
-          svg.classed("dimmed",true);
-          d3.select(e.currentTarget).classed("highlight",true);
-          tooltip.style("opacity",1)
-            .html(`mUS$ ${fmt(Math.round(d.value))}`)
-            .style("left",`${e.pageX+6}px`)
-            .style("top", `${e.pageY-6}px`);
+      // 3) Build links: every CSV link becomes left-source → right-target
+      const sankeyLinks = linksRaw
+        .map(d => {
+          const sName = d.source_kategorie.trim();
+          const tName = d.target_kategorie.trim();
+          const s = nodesRaw.findIndex(n => n.kategorie.trim() === sName);
+          const t = nodesRaw.findIndex(n => n.kategorie.trim() === tName);
+          if (s < 0 || t < 0) return null;
+          return { source: s, target: N + t, value: +d.value };
         })
-        .on("mousemove",e=>{
-          tooltip.style("left",`${e.pageX+6}px`)
-                 .style("top", `${e.pageY-6}px`);
-        })
-        .on("mouseout",()=>{
-          svg.classed("dimmed",false);
-          d3.selectAll(".link").classed("highlight",false);
-          tooltip.style("opacity",0);
-        });
+        .filter(d => d);
 
-    // 6) Draw nodes
-    const node = svg.append("g")
-      .selectAll("g")
-      .data(Gnodes)
-      .enter().append("g")
-        .attr("transform",d=>`translate(${d.x0},${d.y0})`)
-        .on("mouseover",(e,d)=>{
-          svg.classed("dimmed",true);
-          d3.select(e.currentTarget).classed("highlight",true);
-          tooltip.style("opacity",1)
-            .html(d.name)
-            .style("left",`${e.pageX+6}px`)
-            .style("top", `${e.pageY-6}px`);
-        })
-        .on("mousemove",e=>{
-          tooltip.style("left",`${e.pageX+6}px`)
-                 .style("top", `${e.pageY-6}px`);
-        })
-        .on("mouseout",()=>{
-          svg.classed("dimmed",false);
-          d3.selectAll(".node").classed("highlight",false);
-          tooltip.style("opacity",0);
-        });
+      // 4) Layout
+      const { nodes: Gnodes, links: Glinks } = sankey({
+        nodes: sankeyNodes,
+        links: sankeyLinks
+      });
 
-    node.append("rect")
-      .attr("width", sankey.nodeWidth())
-      .attr("height", d=>d.y1-d.y0)
-      .attr("fill", d=>d.color);
+      // 5) Build gradients
+      const defs = svg.append("defs");
+      Glinks.forEach((link, i) => {
+        const grad = defs.append("linearGradient")
+          .attr("id", `grad${i}`)
+          .attr("gradientUnits", "userSpaceOnUse")
+          .attr("x1", link.source.x1)
+          .attr("x2", link.target.x0);
+        grad.append("stop")
+          .attr("offset", "0%")
+          .attr("stop-color", sankeyNodes[link.source.index].color);
+        grad.append("stop")
+          .attr("offset", "100%")
+          .attr("stop-color", sankeyNodes[link.target.index].color);
+      });
 
-    node.append("text")
-      .attr("x", d=> d.col==="L" ? sankey.nodeWidth()+6 : -6)
-      .attr("y", d=> (d.y1-d.y0)/2)
-      .attr("dy","0.35em")
-      .attr("text-anchor", d=> d.col==="L" ? "start":"end")
-      .style("font-size","12px")
-      .text(d=>d.name);
+      // 6) Draw links
+      svg.append("g")
+        .selectAll("path")
+        .data(Glinks)
+        .enter().append("path")
+          .attr("class", "link")
+          .attr("d", d3.sankeyLinkHorizontal())
+          .attr("stroke-width", d => Math.max(1, d.width))
+          .attr("stroke", (d,i) => `url(#grad${i})`)
+          .on("mouseover", (e,d) => {
+            svg.classed("dimmed", true);
+            d3.select(e.currentTarget).classed("highlight", true);
+            tooltip.style("opacity", 1)
+              .html(`${fmt(Math.round(d.value))} Fonds`)
+              .style("left", `${e.pageX + 6}px`)
+              .style("top",  `${e.pageY - 6}px`);
+          })
+          .on("mousemove", e => {
+            tooltip.style("left", `${e.pageX + 6}px`)
+                   .style("top",  `${e.pageY - 6}px`);
+          })
+          .on("mouseout", () => {
+            svg.classed("dimmed", false);
+            d3.selectAll(".link").classed("highlight", false);
+            tooltip.style("opacity", 0);
+          });
 
-  })
-  .catch(err=> console.error("Failed to load CSVs or build sankey:",err));
+      // 7) Draw nodes
+      const node = svg.append("g")
+        .selectAll("g")
+        .data(Gnodes)
+        .enter().append("g")
+          .attr("transform", d => `translate(${d.x0},${d.y0})`)
+          .on("mouseover", (e,d) => {
+            svg.classed("dimmed", true);
+            d3.select(e.currentTarget).classed("highlight", true);
+            tooltip.style("opacity", 1)
+              .html(d.name)
+              .style("left", `${e.pageX + 6}px`)
+              .style("top",  `${e.pageY - 6}px`);
+          })
+          .on("mousemove", e => {
+            tooltip.style("left", `${e.pageX + 6}px`)
+                   .style("top",  `${e.pageY - 6}px`);
+          })
+          .on("mouseout", () => {
+            svg.classed("dimmed", false);
+            d3.selectAll(".node").classed("highlight", false);
+            tooltip.style("opacity", 0);
+          });
+
+      node.append("rect")
+        .attr("width", sankey.nodeWidth())
+        .attr("height", d => d.y1 - d.y0)
+        .attr("fill", d => d.color);
+
+      node.append("text")
+        .attr("x", d => d.col === "L"
+                       ? sankey.nodeWidth() + 6
+                       : -6)
+        .attr("y", d => (d.y1 - d.y0) / 2)
+        .attr("dy", "0.35em")
+        .attr("text-anchor", d => d.col === "L" ? "start" : "end")
+        .style("font-size", "12px")
+        .text(d => d.name);
+
+    })
+    .catch(err => console.error("Failed to load CSVs or build sankey:", err));
   </script>
 </body>
 </html>
