@@ -85,7 +85,7 @@
 
 <body>
     <select id="amSelect">
-        <option value="All Asset Managers">all</option>
+        <option value="all">Alle Asset Managers</option>
         <option value="Barclays">Barclays</option>
         <option value="BNP Paribas">BNP Paribas</option>
         <option value="Citigroup" selected>Citigroup</option>
@@ -121,23 +121,6 @@
 
         const formatComma = d3.format(",");
 
-        const color_map = [
-            { min: 0, max: 25, color: '#586AAD', range: '0-25' },
-            { min: 25, max: 50, color: '#FFD371', range: '25-50' },
-            { min: 50, max: 55, color: '#f5b041', range: '50-55' },
-            { min: 55, max: 60, color: '#eb984e', range: '55-60' },
-            { min: 60, max: 65, color: '#dc7633', range: '60-65' },
-            { min: 65, max: 70, color: '#c0392b', range: '65-70' },
-            { min: 70, max: 75, color: '#a93226', range: '70-75' },
-            { min: 75, max: 100, color: '#7b241c', range: '75-100' },
-            { min: null, max: null, color: '#f0f0f0', range: 'missing' }
-        ];
-
-        function getColorBySecrecyScore(score) {
-            const colorEntry = color_map.find(entry => score >= entry.min && score < entry.max);
-            return colorEntry ? colorEntry.color : '#000';
-        }
-
         function removeCircularLinks(links) {
             return links.filter(link => link.source !== link.target);
         }
@@ -166,7 +149,6 @@
                 const graph = {
                     nodes: nodes.map((d, i) => ({
                         name: d.name.trim(),
-                        secrecyScore: d.secrecyScore ? +d.secrecyScore : null,
                         index: i,
                         aggregateValue: 0
                     })),
@@ -194,25 +176,6 @@
                 const sankeyData = sankey(graph);
 
                 const defs = svg.append("defs");
-
-                sankeyData.links.forEach((d, i) => {
-                    const sourceColor = getColorBySecrecyScore(sankeyData.nodes[d.source.index].secrecyScore);
-                    const targetColor = getColorBySecrecyScore(sankeyData.nodes[d.target.index].secrecyScore);
-
-                    const gradient = defs.append("linearGradient")
-                        .attr("id", "grad" + i)
-                        .attr("gradientUnits", "userSpaceOnUse")
-                        .attr("x1", "0%")
-                        .attr("x2", "100%");
-
-                    gradient.append("stop")
-                        .attr("offset", "0%")
-                        .attr("stop-color", sourceColor);
-
-                    gradient.append("stop")
-                        .attr("offset", "100%")
-                        .attr("stop-color", targetColor);
-                });
 
                 const link = svg.append("g")
                     .selectAll(".link")
@@ -263,12 +226,6 @@
                         link.filter(l => l.source === d || l.target === d)
                             .classed("highlight", true)
                             .attr("stroke-opacity", 0.9);
-
-                        const secrecyScoreText = d.secrecyScore !== null ? `${Math.round(d.secrecyScore)}/100` : "-/100";
-                        tooltip.style("opacity", 1)
-                            .html(`Secrecy score: ${secrecyScoreText}`)
-                            .style("left", (event.pageX + 10) + "px")
-                            .style("top", (event.pageY - 10) + "px");
                     })
                     .on("mousemove", function (event) {
                         tooltip.style("left", (event.pageX + 10) + "px")
@@ -285,8 +242,7 @@
 
                 node.append("rect")
                     .attr("height", d => d.y1 - d.y0)
-                    .attr("width", sankey.nodeWidth())
-                    .attr("fill", d => getColorBySecrecyScore(d.secrecyScore));
+                    .attr("width", sankey.nodeWidth());
 
                 node.append("text")
                     .attr("x", d => {
