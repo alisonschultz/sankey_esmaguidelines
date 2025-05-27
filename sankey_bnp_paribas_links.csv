@@ -1,12 +1,12 @@
 source_kategorie,target_kategorie,value
-environment,environment,126
+environment,environment,120
 environment,keine_kategorie,3
 impact,impact,2
 keine_kategorie,environment,1
 social,social,5
-sustainable,keine_kategorie,13
+sustainable,keine_kategorie,12
 sustainable,social,4
-sustainable,sustainable,64
-transition,environment,2
+sustainable,sustainable,49
+transition,environment,1
 transition,transition,7
-watchlist,watchlist,42
+watchlist,watchlist,38
